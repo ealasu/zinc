@@ -23,24 +23,6 @@ use hal::timer;
 use util::support::get_reg_ref;
 use hal::cortex_m4::nvic;
 
-/// There are 6 standard 16/32bit timers and 6 "wide" 32/64bit timers
-#[allow(missing_docs)]
-#[derive(Clone, Copy)]
-pub enum TimerId {
-  Timer0,
-  Timer1,
-  Timer2,
-  Timer3,
-  Timer4,
-  Timer5,
-  TimerW0,
-  TimerW1,
-  TimerW2,
-  TimerW3,
-  TimerW4,
-  TimerW5,
-}
-
 /// Timer modes
 #[derive(Clone, Copy)]
 pub enum Mode {
@@ -61,70 +43,70 @@ pub enum Mode {
   PWM,
 }
 
-/// Structure describing a single timer counter (both 16/32bit and 32/64bit)
-#[derive(Clone, Copy)]
-pub struct Timer {
-  /// Timer register interface
-  regs    : &'static reg::Timer,
-  /// True if the counter is wide 32/64bit
-  wide    : bool,
-  /// Current timer mode
-  mode    : Mode,
+macro_rules! timer {
+  ($name:ident, $type_name:ident, $regs:expr, $periph:expr, $wide:expr, $irq_num:expr) => {
+    #[derive(Clone, Copy)]
+    pub struct $type_name;
+
+    impl TivaTimer for $type_name {
+      fn periph(&self) -> sysctl::periph::PeripheralClock {
+        $periph
+      }
+
+      fn regs(&self) -> &'static reg::Timer {
+        get_reg_ref($regs)
+      }
+
+      fn wide(&self) -> bool {
+        $wide
+      }
+
+      fn irq_num(&self) -> usize {
+        $irq_num
+      }
+    }
+
+    impl timer::Timer for $type_name {
+      /// Retrieve the current timer value
+      #[inline(always)]
+      fn get_counter(&self) -> u32 {
+        // We count down, however the trait code expects that the counter increases,
+        // so we just complement the value to get an increasing counter.
+        !self.regs().tav.v()
+      }
+    }
+
+    pub const $name: $type_name = $type_name;
+  }
 }
 
-impl Timer {
-  /// Create and configure a Timer
-  pub fn new(id:      TimerId,
-             mode:     Mode,
-             prescale: u32) -> Timer {
-    let (periph, regs, wide) = match id {
-      TimerId::Timer0  =>
-        (sysctl::periph::timer::TIMER_0,   reg::TIMER_0,   false),
-      TimerId::Timer1  =>
-        (sysctl::periph::timer::TIMER_1,   reg::TIMER_1,   false),
-      TimerId::Timer2  =>
-        (sysctl::periph::timer::TIMER_2,   reg::TIMER_2,   false),
-      TimerId::Timer3  =>
-        (sysctl::periph::timer::TIMER_3,   reg::TIMER_3,   false),
-      TimerId::Timer4  =>
-        (sysctl::periph::timer::TIMER_4,   reg::TIMER_4,   false),
-      TimerId::Timer5  =>
-        (sysctl::periph::timer::TIMER_5,   reg::TIMER_5,   false),
-      TimerId::TimerW0 =>
-        (sysctl::periph::timer::TIMER_W_0, reg::TIMER_W_0, true),
-      TimerId::TimerW1 =>
-        (sysctl::periph::timer::TIMER_W_1, reg::TIMER_W_1, true),
-      TimerId::TimerW2 =>
-        (sysctl::periph::timer::TIMER_W_2, reg::TIMER_W_2, true),
-      TimerId::TimerW3 =>
-        (sysctl::periph::timer::TIMER_W_3, reg::TIMER_W_3, true),
-      TimerId::TimerW4 =>
-        (sysctl::periph::timer::TIMER_W_4, reg::TIMER_W_4, true),
-      TimerId::TimerW5 =>
-        (sysctl::periph::timer::TIMER_W_5, reg::TIMER_W_5, true),
-    };
 
-    periph.ensure_enabled();
+/// There are 6 standard 16/32bit timers and 6 "wide" 32/64bit timers
+// TODO
+//timer!(TIMER1, Timer1, reg::TIMER_1, sysctl::periph::timer::TIMER_1, false, 37);
+timer!(TIMERW0, TimerW0, reg::TIMER_W_0, sysctl::periph::timer::TIMER_W_0, true, 110);
+timer!(TIMERW1, TimerW1, reg::TIMER_W_1, sysctl::periph::timer::TIMER_W_1, true, 112);
 
-    let timer = Timer { regs: get_reg_ref(regs), wide: wide, mode: mode};
 
-    timer.configure(prescale);
-
-    timer
-  }
+pub trait TivaTimer {
+  fn periph(&self) -> sysctl::periph::PeripheralClock;
+  fn regs(&self) -> &'static reg::Timer;
+  fn wide(&self) -> bool;
+  fn irq_num(&self) -> usize;
 
   /// Configure timer registers
   /// TODO(simias): Only Periodic and OneShot modes are implemented so far
-  pub fn configure(&self, prescale: u32) {
+  fn configure(&self, mode: Mode, prescale: u32) {
+    self.periph().ensure_enabled();
 
     // Make sure the timer is disabled before making changes.
-    self.regs.ctl.set_taen(false);
+    self.regs().ctl.set_taen(false);
 
     // Configure the timer as half-width so that we can use the prescaler
-    self.regs.cfg.set_cfg(reg::Timer_cfg_cfg::HalfWidth);
+    self.regs().cfg.set_cfg(reg::Timer_cfg_cfg::HalfWidth);
 
-    self.regs.amr
-      .set_mr(match self.mode {
+    self.regs().amr
+      .set_mr(match mode {
         Mode::OneShot  => reg::Timer_amr_mr::OneShot,
         Mode::Periodic => reg::Timer_amr_mr::Periodic,
         _              => panic!("Unimplemented timer mode"),
@@ -135,63 +117,63 @@ impl Timer {
       .set_cdir(reg::Timer_amr_cdir::Down);
 
     // Set maximum timeout value to overflow as late as possible
-    self.regs.tailr.set_tailr(0xffffffff);
+    self.regs().tailr.set_tailr(0xffffffff);
 
     // Set prescale value
-    if !self.wide && prescale > 0xffff {
+    if !self.wide() && prescale > 0xffff {
       panic!("prescale is too wide for this timer");
     }
 
-    self.regs.apr.set_psr(prescale as u32);
+    self.regs().apr.set_psr(prescale as u32);
 
     // Timer is now configured, we can enable it
-    self.regs.ctl.set_taen(true);
+    self.regs().ctl.set_taen(true);
   }
 
-  pub fn enable_timeout_interrupt_a(&self) {
-    nvic::enable_irq(37);
-    self.regs.imr.set_tatoim(true);
+  fn enable_timeout_interrupt_a(&self) {
+    nvic::enable_irq(self.irq_num());
+    self.regs().imr.set_tatoim(true);
 
-    self.regs.imr.set_wueim(true); //= Write Update Error interrupt mask
-    self.regs.imr.set_tbmim(true); //= Timer B match interrupt mask
-    self.regs.imr.set_cbeim(true); //= Timer B capture mode event interrupt mask
-    self.regs.imr.set_cbmim(true); //= Timer B capture mode match interrupt mask
-    self.regs.imr.set_tbtoim(true); //= Timer B time-out interrupt mask
-    self.regs.imr.set_tamim(true); //= Timer A match interrupt mask
-    self.regs.imr.set_rtcim(true); //= RTC interrupt mask
-    self.regs.imr.set_caeim(true); //= Timer A capture mode event interrupt mask
-    self.regs.imr.set_camim(true); //= Timer A capture mode match interrupt mask
-    self.regs.imr.set_tatoim(true); //= Timer A time-out interrupt mask
+    self.regs().imr.set_wueim(true); //= Write Update Error interrupt mask
+    self.regs().imr.set_tbmim(true); //= Timer B match interrupt mask
+    self.regs().imr.set_cbeim(true); //= Timer B capture mode event interrupt mask
+    self.regs().imr.set_cbmim(true); //= Timer B capture mode match interrupt mask
+    self.regs().imr.set_tbtoim(true); //= Timer B time-out interrupt mask
+    self.regs().imr.set_tamim(true); //= Timer A match interrupt mask
+    self.regs().imr.set_rtcim(true); //= RTC interrupt mask
+    self.regs().imr.set_caeim(true); //= Timer A capture mode event interrupt mask
+    self.regs().imr.set_camim(true); //= Timer A capture mode match interrupt mask
+    self.regs().imr.set_tatoim(true); //= Timer A time-out interrupt mask
   }
 
-  pub fn set_interval_a(&self, interval: u32) {
-    self.regs.tailr.set_tailr(interval);
+  fn set_interval_a(&self, interval: u32) {
+    self.regs().tailr.set_tailr(interval);
   }
 
-  pub fn clear_interrupt(&self) {
-    self.regs.icr.set_tatocint(true);
+  fn clear_interrupt(&self) {
+    self.regs().icr.set_tatocint(true);
   }
 
-  pub fn set_config(&self, config: reg::Timer_cfg_cfg) {
-    self.regs.cfg.set_cfg(config);
+  fn set_config(&self, config: reg::Timer_cfg_cfg) {
+    self.regs().cfg.set_cfg(config);
   }
 
-  pub fn disable(&self) {
-    self.regs.ctl.set_taen(false);
+  fn disable(&self) {
+    self.regs().ctl.set_taen(false);
   }
 
-  pub fn enable(&self) {
-    self.regs.ctl.set_taen(true);
+  fn enable(&self) {
+    self.regs().ctl.set_taen(true);
   }
 }
 
-impl timer::Timer for Timer {
+impl timer::Timer for TivaTimer {
   /// Retrieve the current timer value
   #[inline(always)]
   fn get_counter(&self) -> u32 {
     // We count down, however the trait code expects that the counter increases,
     // so we just complement the value to get an increasing counter.
-    !self.regs.tav.v()
+    !self.regs().tav.v()
   }
 }
 
