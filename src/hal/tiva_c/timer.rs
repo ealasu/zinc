@@ -21,6 +21,7 @@
 use hal::tiva_c::sysctl;
 use hal::timer;
 use util::support::get_reg_ref;
+use hal::cortex_m4::nvic;
 
 /// There are 6 standard 16/32bit timers and 6 "wide" 32/64bit timers
 #[allow(missing_docs)]
@@ -146,6 +147,42 @@ impl Timer {
     // Timer is now configured, we can enable it
     self.regs.ctl.set_taen(true);
   }
+
+  pub fn enable_timeout_interrupt_a(&self) {
+    nvic::enable_irq(37);
+    self.regs.imr.set_tatoim(true);
+
+    self.regs.imr.set_wueim(true); //= Write Update Error interrupt mask
+    self.regs.imr.set_tbmim(true); //= Timer B match interrupt mask
+    self.regs.imr.set_cbeim(true); //= Timer B capture mode event interrupt mask
+    self.regs.imr.set_cbmim(true); //= Timer B capture mode match interrupt mask
+    self.regs.imr.set_tbtoim(true); //= Timer B time-out interrupt mask
+    self.regs.imr.set_tamim(true); //= Timer A match interrupt mask
+    self.regs.imr.set_rtcim(true); //= RTC interrupt mask
+    self.regs.imr.set_caeim(true); //= Timer A capture mode event interrupt mask
+    self.regs.imr.set_camim(true); //= Timer A capture mode match interrupt mask
+    self.regs.imr.set_tatoim(true); //= Timer A time-out interrupt mask
+  }
+
+  pub fn set_interval_a(&self, interval: u32) {
+    self.regs.tailr.set_tailr(interval);
+  }
+
+  pub fn clear_interrupt(&self) {
+    self.regs.icr.set_tatocint(true);
+  }
+
+  pub fn set_config(&self, config: reg::Timer_cfg_cfg) {
+    self.regs.cfg.set_cfg(config);
+  }
+
+  pub fn disable(&self) {
+    self.regs.ctl.set_taen(false);
+  }
+
+  pub fn enable(&self) {
+    self.regs.ctl.set_taen(true);
+  }
 }
 
 impl timer::Timer for Timer {
@@ -210,6 +247,21 @@ pub mod reg {
       10..11 => tbevent,   //= Timer B event mode
       13     => tbote,     //= Timer B output trigger enable
       14     => tbpwml,    //= Timer B PWM output level
+    }
+    0x18 => reg32 imr {
+      16 => wueim, //= Write Update Error interrupt mask
+      11 => tbmim, //= Timer B match interrupt mask
+      10 => cbeim, //= Timer B capture mode event interrupt mask
+      9 => cbmim, //= Timer B capture mode match interrupt mask
+      8 => tbtoim, //= Timer B time-out interrupt mask
+      4 => tamim, //= Timer A match interrupt mask
+      3 => rtcim, //= RTC interrupt mask
+      2 => caeim, //= Timer A capture mode event interrupt mask
+      1 => camim, //= Timer A capture mode match interrupt mask
+      0 => tatoim, //= Timer A time-out interrupt mask
+    }
+    0x24 => reg32 icr {
+      0 => tatocint, //= Timer A time-out raw interrupt
     }
     0x28 => reg32 tailr {
       0..31 => tailr,      //= Timer A interval load

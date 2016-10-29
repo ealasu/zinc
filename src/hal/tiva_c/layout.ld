@@ -1,6 +1,8 @@
 _boot_checksum = 0; /* TODO(farcaller): extract this to lpc code only */
 _data_load = LOADADDR(.data);
 
+INCLUDE iomem.ld
+
 ENTRY(main)
 
 MEMORY
