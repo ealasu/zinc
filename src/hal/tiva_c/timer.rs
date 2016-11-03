@@ -105,20 +105,19 @@ pub trait TivaTimer {
 
     self.regs().cfg.set_cfg(cfg);
 
-    // TODO: timer b
+    self.regs().mr[0].set_pwmie(true);
+    self.regs().mr[1].set_pwmie(true);
 
-    self.regs().amr.set_pwmie(true);
-
-    self.regs().amr
+    self.regs().mr[0]
       .set_mr(match mode {
-        Mode::OneShot  => reg::Timer_amr_mr::OneShot,
-        Mode::Periodic => reg::Timer_amr_mr::Periodic,
+        Mode::OneShot  => reg::Timer_mr_mr::OneShot,
+        Mode::Periodic => reg::Timer_mr_mr::Periodic,
         _              => panic!("Unimplemented timer mode"),
       })
       // We need to count down in order for the prescaler to work as a
       // prescaler. If we count up it becomes a timer extension (i.e. it becomes
       // the MSBs of the counter).
-      .set_cdir(reg::Timer_amr_cdir::Down)
+      .set_cdir(reg::Timer_mr_cdir::Down)
       // match interrupt enable
       .set_mie(true);
 
@@ -129,13 +128,10 @@ pub trait TivaTimer {
     //self.regs().ctl.set_taen(true);
   }
 
-  fn set_prescale(&self, prescale: u32) {
-    // TODO
-    // Set prescale value
+  fn prescale(&self, prescale: u32) {
     if !self.wide() && prescale > 0xffff {
       panic!("prescale is too wide for this timer");
     }
-
     self.regs().apr.set_psr(prescale as u32);
   }
 
@@ -148,19 +144,15 @@ pub trait TivaTimer {
     self.regs().tailr.set_tailr(interval);
   }
 
-  fn clear_interrupt(&self) {
+  fn a_clear_interrupt(&self) {
     self.regs().icr.set_tatocint(true);
   }
 
-  fn set_config(&self, config: reg::Timer_cfg_cfg) {
-    self.regs().cfg.set_cfg(config);
-  }
-
-  fn disable(&self) {
+  fn a_disable(&self) {
     self.regs().ctl.set_taen(false);
   }
 
-  fn enable(&self) {
+  fn a_enable(&self) {
     self.regs().ctl.set_taen(true);
   }
 }
@@ -189,8 +181,8 @@ pub mod reg {
         4 => HalfWidth,
       },
     }
-    0x04 => reg32 amr {
-      //! Timer A mode
+    0x04 => reg32 mr[2] {
+      //! Timer A Mode & Timer B mode
       0..1    => mr {      //! mode
         1 => OneShot,
         2 => Periodic,
