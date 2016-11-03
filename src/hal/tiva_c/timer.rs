@@ -83,7 +83,7 @@ macro_rules! timer {
 
 /// There are 6 standard 16/32bit timers and 6 "wide" 32/64bit timers
 // TODO
-//timer!(TIMER1, Timer1, reg::TIMER_1, sysctl::periph::timer::TIMER_1, false, 37);
+timer!(TIMER1, Timer1, reg::TIMER_1, sysctl::periph::timer::TIMER_1, false, 37);
 timer!(TIMERW0, TimerW0, reg::TIMER_W_0, sysctl::periph::timer::TIMER_W_0, true, 110);
 timer!(TIMERW1, TimerW1, reg::TIMER_W_1, sysctl::periph::timer::TIMER_W_1, true, 112);
 
@@ -96,14 +96,18 @@ pub trait TivaTimer {
 
   /// Configure timer registers
   /// TODO(simias): Only Periodic and OneShot modes are implemented so far
-  fn configure(&self, mode: Mode, prescale: u32) {
+  fn configure(&self, cfg: reg::Timer_cfg_cfg, mode: Mode) {
     self.periph().ensure_enabled();
 
     // Make sure the timer is disabled before making changes.
     self.regs().ctl.set_taen(false);
+    self.regs().ctl.set_tben(false);
 
-    // Configure the timer as half-width so that we can use the prescaler
-    self.regs().cfg.set_cfg(reg::Timer_cfg_cfg::HalfWidth);
+    self.regs().cfg.set_cfg(cfg);
+
+    // TODO: timer b
+
+    self.regs().amr.set_pwmie(true);
 
     self.regs().amr
       .set_mr(match mode {
@@ -114,39 +118,33 @@ pub trait TivaTimer {
       // We need to count down in order for the prescaler to work as a
       // prescaler. If we count up it becomes a timer extension (i.e. it becomes
       // the MSBs of the counter).
-      .set_cdir(reg::Timer_amr_cdir::Down);
+      .set_cdir(reg::Timer_amr_cdir::Down)
+      // match interrupt enable
+      .set_mie(true);
 
     // Set maximum timeout value to overflow as late as possible
-    self.regs().tailr.set_tailr(0xffffffff);
+    //self.regs().tailr.set_tailr(0xffffffff);
 
+    // Timer is now configured, we can enable it
+    //self.regs().ctl.set_taen(true);
+  }
+
+  fn set_prescale(&self, prescale: u32) {
+    // TODO
     // Set prescale value
     if !self.wide() && prescale > 0xffff {
       panic!("prescale is too wide for this timer");
     }
 
     self.regs().apr.set_psr(prescale as u32);
-
-    // Timer is now configured, we can enable it
-    self.regs().ctl.set_taen(true);
   }
 
-  fn enable_timeout_interrupt_a(&self) {
-    nvic::enable_irq(self.irq_num());
+  fn a_enable_timeout_interrupt(&self) {
+    nvic::enable_irq(self.irq_num() - 16);
     self.regs().imr.set_tatoim(true);
-
-    self.regs().imr.set_wueim(true); //= Write Update Error interrupt mask
-    self.regs().imr.set_tbmim(true); //= Timer B match interrupt mask
-    self.regs().imr.set_cbeim(true); //= Timer B capture mode event interrupt mask
-    self.regs().imr.set_cbmim(true); //= Timer B capture mode match interrupt mask
-    self.regs().imr.set_tbtoim(true); //= Timer B time-out interrupt mask
-    self.regs().imr.set_tamim(true); //= Timer A match interrupt mask
-    self.regs().imr.set_rtcim(true); //= RTC interrupt mask
-    self.regs().imr.set_caeim(true); //= Timer A capture mode event interrupt mask
-    self.regs().imr.set_camim(true); //= Timer A capture mode match interrupt mask
-    self.regs().imr.set_tatoim(true); //= Timer A time-out interrupt mask
   }
 
-  fn set_interval_a(&self, interval: u32) {
+  fn a_set_interval(&self, interval: u32) {
     self.regs().tailr.set_tailr(interval);
   }
 
