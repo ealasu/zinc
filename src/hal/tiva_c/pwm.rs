@@ -4,21 +4,28 @@ use hal::tiva_c::sysctl;
 use util::support::get_reg_ref;
 use hal::cortex_m4::nvic;
 use hal::tiva_c::pin::Pin;
+use hal::tiva_c::pin::pins::*;
 
 
 macro_rules! pwm_gen {
-  ($name:ident : $type_name:ident, $regs:expr, $periph:expr) => {
+  ($name:ident : $type_name:ident, $regs:expr, $periph:expr, $pin_a:ident, $pin_b:ident) => {
     #[derive(Clone, Copy)]
     pub struct $type_name;
 
     impl PwmGen for $type_name {
-      fn periph(&self) -> sysctl::periph::PeripheralPwm {
+      type PinA = $pin_a;
+      type PinB = $pin_b;
+
+      fn periph(&self) -> sysctl::periph::PeripheralClock {
         $periph
       }
 
       fn regs(&self) -> &'static reg::Pwm {
         get_reg_ref($regs)
       }
+
+      fn pin_a(&self) -> Self::PinA { $pin_a }
+      fn pin_b(&self) -> Self::PinB { $pin_b }
     }
 
     pub const $name: $type_name = $type_name;
@@ -26,14 +33,19 @@ macro_rules! pwm_gen {
 }
 
 // TODO
-pwm!(PWM1: Pwm1, reg::PWM_1, sysctl::periph::pwm::PWM_1);
+pwm_gen!(PWM1: Pwm1, reg::PWM_1, sysctl::periph::pwm::PWM_1, PinF0, PinF1);
 
 
 pub trait PwmGen {
+  type PinA;
+  type PinB;
+  
   fn periph(&self) -> sysctl::periph::PeripheralClock;
-  fn regs(&self) -> &'static reg::Timer;
+  fn regs(&self) -> &'static reg::Pwm;
+  fn pin_a(&self) -> Self::PinA;
+  fn pin_b(&self) -> Self::PinB;
 
-  fn configure<P: Pin>(&self, pin: P) {
+  fn configure(&self) {
   }
 }
 

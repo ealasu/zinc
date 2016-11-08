@@ -415,6 +415,17 @@ pub mod periph {
     pub const UART_7: super::PeripheralClock =
       super::PeripheralClock { class: CLASS, id: 7 };
   }
+
+  pub mod pwm {
+    //! PWM system control peripherals.
+
+    const CLASS: u8 = 0x40 / 4;
+
+    pub const PWM_0: super::PeripheralClock =
+      super::PeripheralClock { class: CLASS, id: 0 };
+    pub const PWM_1: super::PeripheralClock =
+      super::PeripheralClock { class: CLASS, id: 1 };
+  }
 }
 
 pub mod reg {

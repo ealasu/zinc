@@ -21,7 +21,6 @@
 
 use hal::pin::{Gpio, GpioDirection, In, Out, GpioLevel, High, Low};
 use hal::tiva_c::sysctl;
-use util::support::get_reg_ref;
 
 macro_rules! pin {
   ($name:ident : $type_name:ident, $periph:expr, $regs:expr, $index:expr) => {
@@ -63,12 +62,18 @@ macro_rules! pin {
   //PIN_F4: PinF4 = 4
 //});
 
-// TODO
-pin!(PIN_F0: PinF0, sysctl::periph::gpio::PORT_F, reg::PORT_F,  0);
-pin!(PIN_F1: PinF1, sysctl::periph::gpio::PORT_F, reg::PORT_F,  1);
-pin!(PIN_F2: PinF2, sysctl::periph::gpio::PORT_F, reg::PORT_F,  2);
-pin!(PIN_F3: PinF3, sysctl::periph::gpio::PORT_F, reg::PORT_F,  3);
-pin!(PIN_F4: PinF4, sysctl::periph::gpio::PORT_F, reg::PORT_F,  4);
+pub mod pins {
+  use super::*;
+  use hal::tiva_c::sysctl;
+  use util::support::get_reg_ref;
+
+  // TODO
+  pin!(PIN_F0: PinF0, sysctl::periph::gpio::PORT_F, reg::PORT_F,  0);
+  pin!(PIN_F1: PinF1, sysctl::periph::gpio::PORT_F, reg::PORT_F,  1);
+  pin!(PIN_F2: PinF2, sysctl::periph::gpio::PORT_F, reg::PORT_F,  2);
+  pin!(PIN_F3: PinF3, sysctl::periph::gpio::PORT_F, reg::PORT_F,  3);
+  pin!(PIN_F4: PinF4, sysctl::periph::gpio::PORT_F, reg::PORT_F,  4);
+}
 
 
 pub trait Pin {
@@ -76,13 +81,10 @@ pub trait Pin {
   fn regs(&self) -> &'static reg::Port;
   fn index(&self) -> usize;
 
-  /// Enable GPIO peripheral
-  fn enable(&self) {
-    self.periph().ensure_enabled();
-  }
-
   /// Configure GPIO pin
   fn configure(&self, function: u8) {
+    self.periph().ensure_enabled();
+
     // Disable the GPIO during reconfig
     self.regs().den.set_den(self.index(), false);
 
