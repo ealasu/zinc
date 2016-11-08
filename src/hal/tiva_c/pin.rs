@@ -23,100 +23,108 @@ use hal::pin::{Gpio, GpioDirection, In, Out, GpioLevel, High, Low};
 use hal::tiva_c::sysctl;
 use util::support::get_reg_ref;
 
-/// The pins are accessed through ports. Each port has 8 pins and are identified
-/// by a letter (PortA, PortB, etc...).
-#[allow(missing_docs)]
-#[derive(Clone, Copy)]
-pub enum PortId {
-  PortA,
-  PortB,
-  PortC,
-  PortD,
-  PortE,
-  PortF,
+macro_rules! pin {
+  ($name:ident : $type_name:ident, $periph:expr, $regs:expr, $index:expr) => {
+    #[derive(Clone, Copy)]
+    pub struct $type_name;
+
+    impl Pin for $type_name {
+      #[inline(always)]
+      fn periph(&self) -> sysctl::periph::PeripheralClock {
+        $periph
+      }
+
+      #[inline(always)]
+      fn regs(&self) -> &'static reg::Port {
+        get_reg_ref($regs)
+      }
+
+      #[inline(always)]
+      fn index(&self) -> usize {
+        $index
+      }
+    }
+
+    pub const $name: $type_name = $type_name;
+  }
 }
 
-/// Structure describing a single HW pin
-#[derive(Clone, Copy)]
-pub struct Pin {
-  /// Timer register interface
-  regs: &'static reg::Port,
-  /// Pin index in the port
-  index: usize,
-}
+//macro_rules! pin_block {
+  //($periph:expr, $regs:expr, { $( $name:ident : $type_name:ident = $index:expr),+ } ) => {
+    //$(
+      //pin!($name : $type_name, $periph, $regs, $index);
+    //),+
+  //}
+//}
+//pin_block!(sysctl::periph::gpio::PORT_F, , {
+  //PIN_F1: PinF1 = 1,
+  //PIN_F2: PinF2 = 2,
+  //PIN_F3: PinF3 = 3,
+  //PIN_F4: PinF4 = 4
+//});
 
-impl Pin {
-  /// Create and configure a Pin
-  pub fn new(pid:       PortId,
-             pin_index: u8,
-             dir:       GpioDirection,
-             function:  u8) -> Pin {
+// TODO
+pin!(PIN_F0: PinF0, sysctl::periph::gpio::PORT_F, reg::PORT_F,  0);
+pin!(PIN_F1: PinF1, sysctl::periph::gpio::PORT_F, reg::PORT_F,  1);
+pin!(PIN_F2: PinF2, sysctl::periph::gpio::PORT_F, reg::PORT_F,  2);
+pin!(PIN_F3: PinF3, sysctl::periph::gpio::PORT_F, reg::PORT_F,  3);
+pin!(PIN_F4: PinF4, sysctl::periph::gpio::PORT_F, reg::PORT_F,  4);
 
-    // Retrieve GPIO port peripheral to enable it
-    let (periph, regs) = match pid {
-      PortId::PortA => (sysctl::periph::gpio::PORT_A, reg::PORT_A),
-      PortId::PortB => (sysctl::periph::gpio::PORT_B, reg::PORT_B),
-      PortId::PortC => (sysctl::periph::gpio::PORT_C, reg::PORT_C),
-      PortId::PortD => (sysctl::periph::gpio::PORT_D, reg::PORT_D),
-      PortId::PortE => (sysctl::periph::gpio::PORT_E, reg::PORT_E),
-      PortId::PortF => (sysctl::periph::gpio::PORT_F, reg::PORT_F),
-    };
 
-    periph.ensure_enabled();
+pub trait Pin {
+  fn periph(&self) -> sysctl::periph::PeripheralClock;
+  fn regs(&self) -> &'static reg::Port;
+  fn index(&self) -> usize;
 
-    let pin = Pin { regs: get_reg_ref(regs), index: pin_index as usize };
-
-    pin.configure(dir, function);
-
-    pin
+  /// Enable GPIO peripheral
+  fn enable(&self) {
+    self.periph().ensure_enabled();
   }
 
   /// Configure GPIO pin
-  fn configure(&self, dir: GpioDirection, function: u8) {
+  fn configure(&self, function: u8) {
     // Disable the GPIO during reconfig
-    self.regs.den.set_den(self.index, false);
-
-    self.set_direction(dir);
+    self.regs().den.set_den(self.index(), false);
 
     // Configure the "alternate function". AFSEL 0 means GPIO, 1 means the port
     // is driven by another peripheral. When AFSEL is 1 the actual function
     // config goes into the CTL register.
     match function {
       0 => {
-        self.regs.afsel.set_afsel(self.index,
+        self.regs().afsel.set_afsel(self.index(),
                                   reg::Port_afsel_afsel::GPIO);
       },
       f => {
-        self.regs.afsel.set_afsel(self.index,
+        self.regs().afsel.set_afsel(self.index(),
                                   reg::Port_afsel_afsel::PERIPHERAL);
 
-        self.regs.pctl.set_pctl(self.index, f as u32);
+        self.regs().pctl.set_pctl(self.index(), f as u32);
       }
     }
 
     // We can chose to drive each GPIO at either 2, 4 or 8mA. Default to 2mA for
     // now.
     // TODO(simias): make that configurable
-    self.regs.dr2r.set_dr2r(self.index, true);
-    self.regs.dr4r.set_dr4r(self.index, false);
-    self.regs.dr8r.set_dr8r(self.index, false);
+    self.regs().dr2r.set_dr2r(self.index(), true);
+    self.regs().dr4r.set_dr4r(self.index(), false);
+    self.regs().dr8r.set_dr8r(self.index(), false);
 
     // TODO(simias): configure open drain/pull up/pull down/slew rate if necessary
 
-    self.regs.odr.set_odr(self.index, false);
-    self.regs.pur.set_pur(self.index, false);
-    self.regs.pdr.set_pdr(self.index, false);
+    self.regs().odr.set_odr(self.index(), false);
+    self.regs().pur.set_pur(self.index(), false);
+    self.regs().pdr.set_pdr(self.index(), false);
 
     // Enable GPIO
-    self.regs.den.set_den(self.index, true);
+    self.regs().den.set_den(self.index(), true);
   }
 
   fn set_level(&self, level: bool) {
-    self.regs.data.set_data(self.index, level);
+    self.regs().data.set_data(self.index(), level);
   }
 }
 
-impl Gpio for Pin {
+impl<T: Pin> Gpio for T {
   /// Sets output GPIO value to high.
   fn set_high(&self) {
     self.set_level(true);
@@ -129,7 +137,7 @@ impl Gpio for Pin {
 
   /// Returns input GPIO level.
   fn level(&self) -> GpioLevel {
-    match self.regs.data.data(self.index) {
+    match self.regs().data.data(self.index()) {
       true  => High,
       false => Low,
     }
@@ -137,11 +145,16 @@ impl Gpio for Pin {
 
   /// Sets output GPIO direction.
   fn set_direction(&self, dir: GpioDirection) {
-    self.regs.dir.set_dir(self.index,
+    // Disable the GPIO during reconfig
+    self.regs().den.set_den(self.index(), false);
+
+    self.regs().dir.set_dir(self.index(),
                           match dir {
                             In  => reg::Port_dir_dir::INPUT,
                             Out => reg::Port_dir_dir::OUTPUT,
                           });
+
+    self.regs().den.set_den(self.index(), true);
   }
 }
 

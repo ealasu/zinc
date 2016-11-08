@@ -66,22 +66,11 @@ macro_rules! timer {
       }
     }
 
-    impl timer::Timer for $type_name {
-      /// Retrieve the current timer value
-      #[inline(always)]
-      fn get_counter(&self) -> u32 {
-        // We count down, however the trait code expects that the counter increases,
-        // so we just complement the value to get an increasing counter.
-        !self.regs().tav.v()
-      }
-    }
-
     pub const $name: $type_name = $type_name;
   }
 }
 
-
-/// There are 6 standard 16/32bit timers and 6 "wide" 32/64bit timers
+// There are 6 standard 16/32bit timers and 6 "wide" 32/64bit timers
 // TODO
 timer!(TIMER1, Timer1, reg::TIMER_1, sysctl::periph::timer::TIMER_1, false, 37);
 timer!(TIMERW0, TimerW0, reg::TIMER_W_0, sysctl::periph::timer::TIMER_W_0, true, 110);
@@ -157,7 +146,7 @@ pub trait TivaTimer {
   }
 }
 
-impl timer::Timer for TivaTimer {
+impl<T: TivaTimer> timer::Timer for T {
   /// Retrieve the current timer value
   #[inline(always)]
   fn get_counter(&self) -> u32 {

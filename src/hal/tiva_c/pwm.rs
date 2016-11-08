@@ -5,12 +5,12 @@ use util::support::get_reg_ref;
 use hal::cortex_m4::nvic;
 
 
-macro_rules! pwm {
+macro_rules! pwm_gen {
   ($name:ident : $type_name:ident, regs = $regs:expr, periph = $periph:expr) => {
     #[derive(Clone, Copy)]
     pub struct $type_name;
 
-    impl TivaPwm for $type_name {
+    impl PwmGen for $type_name {
       fn periph(&self) -> sysctl::periph::PeripheralPwm {
         $periph
       }
