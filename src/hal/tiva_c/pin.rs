@@ -48,20 +48,6 @@ macro_rules! pin {
   }
 }
 
-//macro_rules! pin_block {
-  //($periph:expr, $regs:expr, { $( $name:ident : $type_name:ident = $index:expr),+ } ) => {
-    //$(
-      //pin!($name : $type_name, $periph, $regs, $index);
-    //),+
-  //}
-//}
-//pin_block!(sysctl::periph::gpio::PORT_F, , {
-  //PIN_F1: PinF1 = 1,
-  //PIN_F2: PinF2 = 2,
-  //PIN_F3: PinF3 = 3,
-  //PIN_F4: PinF4 = 4
-//});
-
 pub mod pins {
   use super::*;
   use hal::tiva_c::sysctl;
