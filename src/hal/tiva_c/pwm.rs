@@ -7,15 +7,15 @@ use hal::tiva_c::pin::Pin;
 use hal::tiva_c::pin::pins::*;
 
 
-macro_rules! pwm_gen {
-  ($name:ident : $type_name:ident, $ctl_regs:expr, $regs:expr, $periph:expr,
-   $pin_a:ident, $pin_a_fn:expr, $pin_b:ident, $pin_b_fn:expr) => {
+macro_rules! pwm {
+  ($name:ident : $type_name:ident,
+   periph=$periph:expr, ctl=$ctl_regs:expr, regs=$regs:expr, chan=$chan:expr,
+   pin=$pin:ident, pin_fn=$pin_fn:expr) => {
     #[derive(Clone, Copy)]
     pub struct $type_name;
 
     impl PwmGen for $type_name {
-      type PinA = $pin_a;
-      type PinB = $pin_b;
+      type Pin = $pin;
 
       fn periph(&self) -> sysctl::periph::PeripheralClock {
         $periph
@@ -29,10 +29,12 @@ macro_rules! pwm_gen {
         get_reg_ref($ctl_regs)
       }
 
-      fn pin_a(&self) -> Self::PinA { $pin_a }
-      fn pin_a_function(&self) -> u8 { $pin_a_fn }
-      fn pin_b(&self) -> Self::PinB { $pin_b }
-      fn pin_b_function(&self) -> u8 { $pin_b_fn }
+      fn chan(&self) -> usize {
+        $chan
+      }
+
+      fn pin(&self) -> Self::Pin { $pin }
+      fn pin_function(&self) -> u8 { $pin_fn }
     }
 
     pub const $name: $type_name = $type_name;
@@ -40,29 +42,43 @@ macro_rules! pwm_gen {
 }
 
 // TODO
-pwm_gen!(PWM1_GEN2: Pwm1Gen2, reg::PWM_1_CTL, reg::PWM_1_GEN_2, sysctl::periph::pwm::PWM_1, PinF0, 5, PinF1, 5);
+//pwm!(PWM1_GEN2: Pwm1Gen2, reg::PWM_1_CTL, reg::PWM_1_GEN_2, sysctl::periph::pwm::PWM_1, PinF0, 5, PinF1, 5);
+pwm!(PWM1_CHAN5: Pwm1Chan5, periph=sysctl::periph::pwm::PWM_1, ctl=reg::PWM_1_CTL, regs=reg::PWM_1_GEN_2, chan=1, pin=PinF1, pin_fn=5);
 
 
 pub trait PwmGen {
-  type PinA: Pin;
-  type PinB: Pin;
+  type Pin: Pin;
   
   fn periph(&self) -> sysctl::periph::PeripheralClock;
   fn ctl_regs(&self) -> &'static reg::PwmCtl;
   fn regs(&self) -> &'static reg::PwmGen;
-  fn pin_a(&self) -> Self::PinA;
-  fn pin_a_function(&self) -> u8;
-  fn pin_b(&self) -> Self::PinB;
-  fn pin_b_function(&self) -> u8;
+  fn pin(&self) -> Self::Pin;
+  fn pin_function(&self) -> u8;
+  fn chan(&self) -> usize;
 
   fn configure(&self) {
     self.periph().ensure_enabled();
+    self.pin().configure(self.pin_function());
+
+    self.regs().gen[self.chan()].set_load(1);
+    if self.chan() == 0 {
+      self.regs().gen[self.chan()].set_actcmpad(reg::PwmGen_gen_actcmpad::Low);
+    } else {
+      self.regs().gen[self.chan()].set_actcmpbd(reg::PwmGen_gen_actcmpbd::Low);
+    }
   }
 
-  fn configure_b(&self) {
-    self.pin_b().configure(self.pin_b_function());
-    self.regs().gen[1].set_load(1);
-    self.regs().gen[1].set_actcmpad(0);
+  fn set_period(&self, period: u16) {
+    self.regs().load.set_load(period as u32);
+  }
+
+  fn period(&self) -> u16 {
+    self.regs().load.load() as u16
+  }
+
+  fn set_pulse_width(&self, pulse_width: u16) {
+    let cmp = self.period() - pulse_width;
+    self.regs().cmp[self.chan()].set_comp(cmp as u32);
   }
 }
 
@@ -83,11 +99,28 @@ pub mod reg {
   });
 
   ioregs!(PwmGen = {
-    0x00 => reg32 cfg {
+    0x00 => reg32 ctl {
       18 => latch,
     }
+    0x10 => reg32 load {
+      15..0 => load,
+    }
+    0x18 => reg32 cmp[2] {
+      15..0 => comp,
+    }
     0x20 => reg32 gen[2] {
-      7..6 => actcmpad,
+      11..10 => actcmpbd {
+        0 => Nothing,
+        1 => Invert,
+        2 => Low,
+        3 => High,
+      },
+      7..6 => actcmpad {
+        0 => Nothing,
+        1 => Invert,
+        2 => Low,
+        3 => High,
+      },
       3..2 => load,
     }
   });
