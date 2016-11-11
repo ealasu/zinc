@@ -1,50 +1,53 @@
 #![allow(missing_docs)]
 
 use hal::tiva_c::sysctl;
-use util::support::get_reg_ref;
 use hal::cortex_m4::nvic;
 use hal::tiva_c::pin::Pin;
-use hal::tiva_c::pin::pins::*;
 
+pub mod pwms {
+  use util::support::get_reg_ref;
+  use hal::tiva_c::sysctl;
+  use hal::tiva_c::pin::pins::*;
+  use super::*;
 
-macro_rules! pwm {
-  ($name:ident : $type_name:ident,
-   periph=$periph:expr, ctl=$ctl_regs:expr, regs=$regs:expr, chan=$chan:expr,
-   pin=$pin:ident, pin_fn=$pin_fn:expr) => {
-    #[derive(Clone, Copy)]
-    pub struct $type_name;
+  macro_rules! pwm {
+    ($name:ident : $type_name:ident,
+     periph=$periph:expr, ctl=$ctl_regs:expr, regs=$regs:expr, chan=$chan:expr,
+     pin=$pin:ident, pin_fn=$pin_fn:expr) => {
+      #[derive(Clone, Copy)]
+      pub struct $type_name;
 
-    impl PwmGen for $type_name {
-      type Pin = $pin;
+      impl PwmGen for $type_name {
+        type Pin = $pin;
 
-      fn periph(&self) -> sysctl::periph::PeripheralClock {
-        $periph
+        fn periph(&self) -> sysctl::periph::PeripheralClock {
+          $periph
+        }
+
+        fn regs(&self) -> &'static reg::PwmGen {
+          get_reg_ref($regs)
+        }
+
+        fn ctl_regs(&self) -> &'static reg::PwmCtl {
+          get_reg_ref($ctl_regs)
+        }
+
+        fn chan(&self) -> usize {
+          $chan
+        }
+
+        fn pin(&self) -> Self::Pin { $pin }
+        fn pin_function(&self) -> u8 { $pin_fn }
       }
 
-      fn regs(&self) -> &'static reg::PwmGen {
-        get_reg_ref($regs)
-      }
-
-      fn ctl_regs(&self) -> &'static reg::PwmCtl {
-        get_reg_ref($ctl_regs)
-      }
-
-      fn chan(&self) -> usize {
-        $chan
-      }
-
-      fn pin(&self) -> Self::Pin { $pin }
-      fn pin_function(&self) -> u8 { $pin_fn }
+      pub const $name: $type_name = $type_name;
     }
-
-    pub const $name: $type_name = $type_name;
   }
+
+  // TODO
+  pwm!(PWM1_CHAN5: Pwm1Chan5, periph=sysctl::periph::pwm::PWM_1, ctl=reg::PWM_1_CTL, regs=reg::PWM_1_GEN_2, chan=5, pin=PinF1, pin_fn=5);
+  pwm!(PWM1_CHAN6: Pwm1Chan6, periph=sysctl::periph::pwm::PWM_1, ctl=reg::PWM_1_CTL, regs=reg::PWM_1_GEN_3, chan=6, pin=PinF2, pin_fn=5);
 }
-
-// TODO
-//pwm!(PWM1_GEN2: Pwm1Gen2, reg::PWM_1_CTL, reg::PWM_1_GEN_2, sysctl::periph::pwm::PWM_1, PinF0, 5, PinF1, 5);
-pwm!(PWM1_CHAN5: Pwm1Chan5, periph=sysctl::periph::pwm::PWM_1, ctl=reg::PWM_1_CTL, regs=reg::PWM_1_GEN_2, chan=1, pin=PinF1, pin_fn=5);
-
 
 pub trait PwmGen {
   type Pin: Pin;
@@ -56,15 +59,19 @@ pub trait PwmGen {
   fn pin_function(&self) -> u8;
   fn chan(&self) -> usize;
 
+  fn index(&self) -> usize {
+    self.chan() % 2
+  }
+
   fn configure(&self) {
     self.periph().ensure_enabled();
     self.pin().configure(self.pin_function());
 
-    self.regs().gen[self.chan()].set_load(1);
-    if self.chan() == 0 {
-      self.regs().gen[self.chan()].set_actcmpad(reg::PwmGen_gen_actcmpad::Low);
+    self.regs().gen[self.index()].set_load(1);
+    if self.index() == 0 {
+      self.regs().gen[self.index()].set_actcmpad(reg::PwmGen_gen_actcmpad::Low);
     } else {
-      self.regs().gen[self.chan()].set_actcmpbd(reg::PwmGen_gen_actcmpbd::Low);
+      self.regs().gen[self.index()].set_actcmpbd(reg::PwmGen_gen_actcmpbd::Low);
     }
   }
 
@@ -78,29 +85,31 @@ pub trait PwmGen {
 
   fn set_pulse_width(&self, pulse_width: u16) {
     let cmp = self.period() - pulse_width;
-    self.regs().cmp[self.chan()].set_comp(cmp as u32);
+    self.regs().cmp[self.index()].set_comp(cmp as u32);
+  }
+
+  fn enable(&self) {
+    // enable output
+    self.ctl_regs().enable.set_enable(self.chan(), true);
+    // enable gen
+    self.regs().ctl.set_enable(true);
   }
 }
 
-
 pub mod reg {
-  //! Timer registers definition
   use volatile_cell::VolatileCell;
   use core::ops::Drop;
 
   ioregs!(PwmCtl = {
-    0x00 => reg32 cfg {
-      0..2 => cfg {
-        0 => FullWidth,
-        1 => Rtc,
-        4 => HalfWidth,
-      },
+    0x08 => reg32 enable {
+      7..0 => enable[8],
     }
   });
 
   ioregs!(PwmGen = {
     0x00 => reg32 ctl {
       18 => latch,
+      0 => enable,
     }
     0x10 => reg32 load {
       15..0 => load,
