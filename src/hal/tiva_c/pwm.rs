@@ -75,6 +75,10 @@ pub trait PwmGen {
     }
   }
 
+  fn clock(&self) -> u32 {
+    sysctl::clock::sysclk_get() as u32 / 64
+  }
+
   fn set_period(&self, period: u16) {
     self.regs().load.set_load(period as u32);
   }
