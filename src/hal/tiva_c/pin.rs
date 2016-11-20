@@ -54,6 +54,15 @@ pub mod pins {
   use util::support::get_reg_ref;
 
   // TODO
+  pin!(PIN_B4: PinB4, sysctl::periph::gpio::PORT_B, reg::PORT_B,  4);
+
+  pin!(PIN_D0: PinD0, sysctl::periph::gpio::PORT_D, reg::PORT_D,  0);
+  pin!(PIN_D1: PinD1, sysctl::periph::gpio::PORT_D, reg::PORT_D,  1);
+  pin!(PIN_D2: PinD2, sysctl::periph::gpio::PORT_D, reg::PORT_D,  2);
+
+  pin!(PIN_E4: PinE4, sysctl::periph::gpio::PORT_E, reg::PORT_E,  4);
+  pin!(PIN_E5: PinE5, sysctl::periph::gpio::PORT_E, reg::PORT_E,  5);
+
   pin!(PIN_F0: PinF0, sysctl::periph::gpio::PORT_F, reg::PORT_F,  0);
   pin!(PIN_F1: PinF1, sysctl::periph::gpio::PORT_F, reg::PORT_F,  1);
   pin!(PIN_F2: PinF2, sysctl::periph::gpio::PORT_F, reg::PORT_F,  2);

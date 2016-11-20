@@ -45,6 +45,9 @@ pub mod pwms {
   }
 
   // TODO
+  pwm!(PWM0_CHAN4: Pwm0Chan4, periph=sysctl::periph::pwm::PWM_0, ctl=reg::PWM_0_CTL, regs=reg::PWM_0_GEN_2, chan=4, pin=PinE4, pin_fn=4);
+  pwm!(PWM0_CHAN6: Pwm0Chan6, periph=sysctl::periph::pwm::PWM_0, ctl=reg::PWM_0_CTL, regs=reg::PWM_0_GEN_3, chan=6, pin=PinD0, pin_fn=4);
+
   pwm!(PWM1_CHAN5: Pwm1Chan5, periph=sysctl::periph::pwm::PWM_1, ctl=reg::PWM_1_CTL, regs=reg::PWM_1_GEN_2, chan=5, pin=PinF1, pin_fn=5);
   pwm!(PWM1_CHAN6: Pwm1Chan6, periph=sysctl::periph::pwm::PWM_1, ctl=reg::PWM_1_CTL, regs=reg::PWM_1_GEN_3, chan=6, pin=PinF2, pin_fn=5);
 }
