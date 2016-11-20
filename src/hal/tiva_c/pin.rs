@@ -88,6 +88,11 @@ pub trait Pin {
   fn configure(&self, function: u8) {
     self.periph().ensure_enabled();
 
+    // Unlock (only needed for certain pins)
+    self.regs().lock.set_lock(0x4C4F434B); // magic number
+    self.regs().cr.set_cr(self.index(), true);
+    self.regs().lock.set_lock(0);
+
     // Disable the GPIO during reconfig
     self.regs().den.set_den(self.index(), false);
 
@@ -124,7 +129,11 @@ pub trait Pin {
     self.regs().den.set_den(self.index(), true);
   }
 
-  fn set_level(&self, level: bool) {
+  fn set_level(&self, level: GpioLevel) {
+    let level = match level {
+      Low => false,
+      High => true,
+    };
     self.regs().data.set_data(self.index(), level);
   }
 }
@@ -132,12 +141,12 @@ pub trait Pin {
 impl<T: Pin> Gpio for T {
   /// Sets output GPIO value to high.
   fn set_high(&self) {
-    self.set_level(true);
+    self.set_level(High);
   }
 
   /// Sets output GPIO value to low.
   fn set_low(&self) {
-    self.set_level(false);
+    self.set_level(Low);
   }
 
   /// Returns input GPIO level.
@@ -228,6 +237,16 @@ pub mod reg {
     0x51C => reg32 den {
       //! Enable pin
       0..7 => den[8]
+    }
+
+    0x520 => reg32 lock {
+      //! Lock
+      31..0 => lock
+    }
+
+    0x524 => reg32 cr {
+      //! Commit
+      7..0 => cr[8]
     }
 
     0x52C => reg32 pctl {
