@@ -56,9 +56,17 @@ pub mod pins {
   // TODO
   pin!(PIN_B4: PinB4, sysctl::periph::gpio::PORT_B, reg::PORT_B,  4);
 
+  pin!(PIN_C5: PinC5, sysctl::periph::gpio::PORT_C, reg::PORT_C,  5);
+  pin!(PIN_C6: PinC6, sysctl::periph::gpio::PORT_C, reg::PORT_C,  6);
+
   pin!(PIN_D0: PinD0, sysctl::periph::gpio::PORT_D, reg::PORT_D,  0);
   pin!(PIN_D1: PinD1, sysctl::periph::gpio::PORT_D, reg::PORT_D,  1);
   pin!(PIN_D2: PinD2, sysctl::periph::gpio::PORT_D, reg::PORT_D,  2);
+  pin!(PIN_D3: PinD3, sysctl::periph::gpio::PORT_D, reg::PORT_D,  3);
+  pin!(PIN_D4: PinD4, sysctl::periph::gpio::PORT_D, reg::PORT_D,  4);
+  pin!(PIN_D5: PinD5, sysctl::periph::gpio::PORT_D, reg::PORT_D,  5);
+  pin!(PIN_D6: PinD6, sysctl::periph::gpio::PORT_D, reg::PORT_D,  6);
+  pin!(PIN_D7: PinD7, sysctl::periph::gpio::PORT_D, reg::PORT_D,  7);
 
   pin!(PIN_E4: PinE4, sysctl::periph::gpio::PORT_E, reg::PORT_E,  4);
   pin!(PIN_E5: PinE5, sysctl::periph::gpio::PORT_E, reg::PORT_E,  5);
