@@ -84,14 +84,18 @@ pub trait Pin {
   fn regs(&self) -> &'static reg::Port;
   fn index(&self) -> usize;
 
+  fn unlock(&self) {
+    self.regs().lock.set_lock(0x4C4F434B); // magic number
+    self.regs().cr.set_cr(self.index(), true);
+    self.regs().lock.set_lock(0);
+  }
+
   /// Configure GPIO pin
   fn configure(&self, function: u8) {
     self.periph().ensure_enabled();
 
     // Unlock (only needed for certain pins)
-    self.regs().lock.set_lock(0x4C4F434B); // magic number
-    self.regs().cr.set_cr(self.index(), true);
-    self.regs().lock.set_lock(0);
+    self.unlock();
 
     // Disable the GPIO during reconfig
     self.regs().den.set_den(self.index(), false);

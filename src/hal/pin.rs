@@ -50,6 +50,14 @@ pub trait Gpio {
   /// Set direction mode to `In` or `Out`,
   /// for reading or writing respectively.
   fn set_direction(&self, new_mode: GpioDirection);
+
+  /// Toggle pin
+  fn toggle(&self) {
+    match self.level() {
+      Low => self.set_high(),
+      High => self.set_low(),
+    }
+  }
 }
 
 /// Analog Input
