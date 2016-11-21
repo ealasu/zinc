@@ -21,5 +21,6 @@ pub mod pin;
 pub mod timer;
 pub mod uart;
 pub mod pwm;
+pub mod qei;
 
 #[path="../../util/ioreg.rs"] mod util;

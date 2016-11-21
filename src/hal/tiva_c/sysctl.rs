@@ -426,6 +426,17 @@ pub mod periph {
     pub const PWM_1: super::PeripheralClock =
       super::PeripheralClock { class: CLASS, id: 1 };
   }
+
+  pub mod qei {
+    //! QEI system control peripherals.
+
+    const CLASS: u8 = 0x44 / 4;
+
+    pub const QEI_0: super::PeripheralClock =
+      super::PeripheralClock { class: CLASS, id: 0 };
+    pub const QEI_1: super::PeripheralClock =
+      super::PeripheralClock { class: CLASS, id: 1 };
+  }
 }
 
 pub mod reg {
