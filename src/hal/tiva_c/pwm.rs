@@ -1,7 +1,6 @@
 #![allow(missing_docs)]
 
 use hal::tiva_c::sysctl;
-use hal::cortex_m4::nvic;
 use hal::tiva_c::pin::Pin;
 
 pub mod pwms {
