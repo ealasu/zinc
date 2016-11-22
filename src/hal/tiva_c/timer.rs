@@ -18,10 +18,9 @@
 //! Timer configuration
 //! This code should support both standand and wide timers
 
-use hal::tiva_c::sysctl;
 use hal::timer;
-use util::support::get_reg_ref;
 use hal::cortex_m4::nvic;
+use hal::tiva_c::sysctl;
 
 /// Timer modes
 #[derive(Clone, Copy)]
@@ -43,39 +42,44 @@ pub enum Mode {
   PWM,
 }
 
-macro_rules! timer {
-  ($name:ident, $type_name:ident, $regs:expr, $periph:expr, $wide:expr, $irq_num:expr) => {
-    #[derive(Clone, Copy)]
-    pub struct $type_name;
+pub mod timers {
+  use super::*;
+  use util::support::get_reg_ref;
+  use hal::tiva_c::sysctl;
 
-    impl TivaTimer for $type_name {
-      fn periph(&self) -> sysctl::periph::PeripheralClock {
-        $periph
+  macro_rules! timer {
+    ($name:ident, $type_name:ident, $regs:expr, $periph:expr, $wide:expr, $irq_num:expr) => {
+      #[derive(Clone, Copy)]
+      pub struct $type_name;
+
+      impl TivaTimer for $type_name {
+        fn periph(&self) -> sysctl::periph::PeripheralClock {
+          $periph
+        }
+
+        fn regs(&self) -> &'static reg::Timer {
+          get_reg_ref($regs)
+        }
+
+        fn wide(&self) -> bool {
+          $wide
+        }
+
+        fn irq_num(&self) -> usize {
+          $irq_num
+        }
       }
 
-      fn regs(&self) -> &'static reg::Timer {
-        get_reg_ref($regs)
-      }
-
-      fn wide(&self) -> bool {
-        $wide
-      }
-
-      fn irq_num(&self) -> usize {
-        $irq_num
-      }
+      pub const $name: $type_name = $type_name;
     }
-
-    pub const $name: $type_name = $type_name;
   }
+
+  // There are 6 standard 16/32bit timers and 6 "wide" 32/64bit timers
+  // TODO
+  timer!(TIMER1, Timer1, reg::TIMER_1, sysctl::periph::timer::TIMER_1, false, 37);
+  timer!(TIMERW0, TimerW0, reg::TIMER_W_0, sysctl::periph::timer::TIMER_W_0, true, 110);
+  timer!(TIMERW1, TimerW1, reg::TIMER_W_1, sysctl::periph::timer::TIMER_W_1, true, 112);
 }
-
-// There are 6 standard 16/32bit timers and 6 "wide" 32/64bit timers
-// TODO
-timer!(TIMER1, Timer1, reg::TIMER_1, sysctl::periph::timer::TIMER_1, false, 37);
-timer!(TIMERW0, TimerW0, reg::TIMER_W_0, sysctl::periph::timer::TIMER_W_0, true, 110);
-timer!(TIMERW1, TimerW1, reg::TIMER_W_1, sysctl::periph::timer::TIMER_W_1, true, 112);
-
 
 pub trait TivaTimer {
   fn periph(&self) -> sysctl::periph::PeripheralClock;
