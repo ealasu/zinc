@@ -35,9 +35,9 @@ pub mod qeis {
     }
   }
 
-  qei!(QEI_0: Qei0, periph=sysctl::periph::qei::QEI_0, regs=reg::QEI_0,
+  qei!(QEI0: Qei0, periph=sysctl::periph::qei::QEI_0, regs=reg::QEI_0,
        pin_a=PinD6, pin_a_fn=6, pin_b=PinD7, pin_b_fn=6);
-  qei!(QEI_1: Qei1, periph=sysctl::periph::qei::QEI_1, regs=reg::QEI_1,
+  qei!(QEI1: Qei1, periph=sysctl::periph::qei::QEI_1, regs=reg::QEI_1,
        pin_a=PinC5, pin_a_fn=6, pin_b=PinC6, pin_b_fn=6);
 }
 
