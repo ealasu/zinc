@@ -20,6 +20,7 @@
 
 use hal::tiva_c::sysctl;
 use hal::timer;
+use util::support::get_reg_ref;
 use hal::cortex_m4::nvic;
 
 /// Timer modes
@@ -42,90 +43,45 @@ pub enum Mode {
   PWM,
 }
 
-pub mod timers {
-  macro_rules! timer {
-    (
-      $mod_name:ident, $name:ident : $type_name:ident,
-      regs=$regs:expr, periph=$periph:expr, wide=$wide:expr, irq_num=$irq_num:expr,
-      isr_fn=$isr_fn:ident, isr_handler_fn=$isr_handler_fn:ident, isr_handler_ctx=$isr_handler_ctx:ident
-    ) => {
-      mod $mod_name {
-        use super::super::*;
-        use core::mem;
-        use hal::tiva_c::sysctl;
-        use util::support::get_reg_ref;
-        use hal::cortex_m4::irq::NoInterrupts;
+macro_rules! timer {
+  ($name:ident, $type_name:ident, $regs:expr, $periph:expr, $wide:expr, $irq_num:expr) => {
+    #[derive(Clone, Copy)]
+    pub struct $type_name;
 
-        #[derive(Clone, Copy)]
-        pub struct $type_name;
-
-        impl TivaTimer for $type_name {
-          fn periph(&self) -> sysctl::periph::PeripheralClock {
-            $periph
-          }
-
-          fn regs(&self) -> &'static reg::Timer {
-            get_reg_ref($regs)
-          }
-
-          fn wide(&self) -> bool {
-            $wide
-          }
-
-          fn irq_num(&self) -> usize {
-            $irq_num
-          }
-
-          //fn set_handler<T>(&self, context: &T, handler: &Fn(&T)) {
-          fn set_handler(&self, handler: &Fn()) {
-            let _no_interrupts = NoInterrupts::new();
-            unsafe {
-              let context: *const () = mem::transmute(context);
-              let handler: *const Fn(*const ()) = mem::transmute(handler);
-              ISR_HANDLER = Some((context, handler));
-            }
-          }
-        }
-
-        pub const $name: $type_name = $type_name;
-
-        static mut ISR_HANDLER: Option<(*const (), *const Fn(*const ()))> = None;
-
-        #[allow(dead_code)]
-        #[no_mangle]
-        pub extern fn $isr_fn() {
-          unsafe {
-            if let Some((context, handler)) = ISR_HANDLER {
-              let handler: &Fn(*const ()) = mem::transmute(handler);
-              (handler)(context);
-            }
-          }
-        }
+    impl TivaTimer for $type_name {
+      fn periph(&self) -> sysctl::periph::PeripheralClock {
+        $periph
       }
 
-      pub use self::$mod_name::{$type_name, $name};
-    }
-  }
+      fn regs(&self) -> &'static reg::Timer {
+        get_reg_ref($regs)
+      }
 
-  // There are 6 standard 16/32bit timers and 6 "wide" 32/64bit timers
-  // TODO
-  timer!(timer1, TIMER1: Timer1, regs=reg::TIMER_1, periph=sysctl::periph::timer::TIMER_1,
-         wide=false, irq_num=37, isr_fn=isr_timer_1_a,
-         isr_handler_fn=TIMER1_HANDLER_FN, isr_handler_ctx=TIMER1_HANDLER_CTX);
-  timer!(timerw0, TIMERW0: TimerW0, regs=reg::TIMER_W_0, periph=sysctl::periph::timer::TIMER_W_0,
-         wide=true, irq_num=110, isr_fn=isr_wide_timer_0_a,
-         isr_handler_fn=TIMERW0_HANDLER_FN, isr_handler_ctx=TIMERW0_HANDLER_CTX);
-  //timer!(TIMERW1: TimerW1, regs=reg::TIMER_W_1, periph=sysctl::periph::timer::TIMER_W_1,
-         //wide=true, irq_num=112);
+      fn wide(&self) -> bool {
+        $wide
+      }
+
+      fn irq_num(&self) -> usize {
+        $irq_num
+      }
+    }
+
+    pub const $name: $type_name = $type_name;
+  }
 }
+
+// There are 6 standard 16/32bit timers and 6 "wide" 32/64bit timers
+// TODO
+timer!(TIMER1, Timer1, reg::TIMER_1, sysctl::periph::timer::TIMER_1, false, 37);
+timer!(TIMERW0, TimerW0, reg::TIMER_W_0, sysctl::periph::timer::TIMER_W_0, true, 110);
+timer!(TIMERW1, TimerW1, reg::TIMER_W_1, sysctl::periph::timer::TIMER_W_1, true, 112);
+
 
 pub trait TivaTimer {
   fn periph(&self) -> sysctl::periph::PeripheralClock;
   fn regs(&self) -> &'static reg::Timer;
   fn wide(&self) -> bool;
   fn irq_num(&self) -> usize;
-  //fn set_handler<T>(&self, context: &T, handler: &Fn(&T));
-          fn set_handler(&self, handler: &Fn());
 
   /// Configure timer registers
   /// TODO(simias): Only Periodic and OneShot modes are implemented so far
