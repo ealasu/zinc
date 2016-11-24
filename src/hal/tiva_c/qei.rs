@@ -85,7 +85,7 @@ pub trait Qei {
   }
 }
 
-impl<A,B> QuadratureDecoder for Qei<PinA=A, PinB=B> where A: Pin, B: Pin {
+impl<T: Qei> QuadratureDecoder for T {
   fn maxpos(&self) -> u32 {
     self.regs().maxpos.maxpos()
   }
