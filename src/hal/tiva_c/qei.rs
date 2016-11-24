@@ -2,6 +2,7 @@
 
 use hal::tiva_c::sysctl;
 use hal::tiva_c::pin::Pin;
+use hal::quadrature::QuadratureDecoder;
 
 pub mod qeis {
   use util::support::get_reg_ref;
@@ -62,7 +63,7 @@ pub trait Qei {
     self.regs().ctl.set_sigmode(reg::Qei_ctl_sigmode::Quadrature);
     self.regs().ctl.set_capmode(reg::Qei_ctl_capmode::AB);
     self.regs().ctl.set_resmode(reg::Qei_ctl_resmode::NoReset);
-    self.set_maxpos(u32::max_value());
+    self.regs().maxpos.set_maxpos(u32::max_value());
 
     self.enable();
   }
@@ -75,6 +76,16 @@ pub trait Qei {
     self.regs().ctl.set_enable(true);
   }
 
+  fn enable_input_filter(&self) {
+    self.regs().ctl.set_filten(true);
+  }
+
+  fn disable_input_filter(&self) {
+    self.regs().ctl.set_filten(false);
+  }
+}
+
+impl<A,B> QuadratureDecoder for Qei<PinA=A, PinB=B> where A: Pin, B: Pin {
   fn maxpos(&self) -> u32 {
     self.regs().maxpos.maxpos()
   }
@@ -89,14 +100,6 @@ pub trait Qei {
 
   fn set_pos(&self, pos: u32) {
     self.regs().pos.set_pos(pos);
-  }
-
-  fn enable_input_filter(&self) {
-    self.regs().ctl.set_filten(true);
-  }
-
-  fn disable_input_filter(&self) {
-    self.regs().ctl.set_filten(false);
   }
 }
 

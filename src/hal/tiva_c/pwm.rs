@@ -89,6 +89,11 @@ pub trait PwmGen {
     self.regs().load.load() as u16
   }
 
+  fn pulse_width(&self) -> u16 {
+    let cmp = self.regs().cmp[self.index()].comp() as u16;
+    self.period() - cmp
+  }
+
   fn set_pulse_width(&self, pulse_width: u16) {
     let cmp = self.period() - pulse_width;
     self.regs().cmp[self.index()].set_comp(cmp as u32);
