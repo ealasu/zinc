@@ -34,47 +34,47 @@ extern {
   fn isr_reserved_1();
 }
 
-#[no_mangle]
-pub unsafe extern fn isr_handler_wrapper() {
-  asm!(".weak isr_nmi, isr_hardfault, isr_mmfault, isr_busfault
-      .weak isr_usagefault, isr_svcall, isr_pendsv, isr_systick
-      .weak isr_debugmon
-      .weak isr_reserved_1
+//#[no_mangle]
+//pub unsafe extern fn isr_handler_wrapper() {
+  //asm!(".weak isr_nmi, isr_hardfault, isr_mmfault, isr_busfault
+      //.weak isr_usagefault, isr_svcall, isr_pendsv, isr_systick
+      //.weak isr_debugmon
+      //.weak isr_reserved_1
 
-      .thumb_func
-      isr_nmi:
+      //.thumb_func
+      //isr_nmi:
 
-      .thumb_func
-      isr_hardfault:
+      //.thumb_func
+      //isr_hardfault:
 
-      .thumb_func
-      isr_mmfault:
+      //.thumb_func
+      //isr_mmfault:
 
-      .thumb_func
-      isr_busfault:
+      //.thumb_func
+      //isr_busfault:
 
-      .thumb_func
-      isr_usagefault:
+      //.thumb_func
+      //isr_usagefault:
 
-      .thumb_func
-      isr_svcall:
+      //.thumb_func
+      //isr_svcall:
 
-      .thumb_func
-      isr_pendsv:
+      //.thumb_func
+      //isr_pendsv:
 
-      .thumb_func
-      isr_systick:
+      //.thumb_func
+      //isr_systick:
 
-      b isr_default_fault
+      //b isr_default_fault
 
-      .thumb_func
-      isr_default_fault:
-      mrs r0, psp
-      mrs r1, msp
-      ldr r2, [r0, 0x18]
-      ldr r3, [r1, 0x18]
-      bkpt" :::: "volatile");
-}
+      //.thumb_func
+      //isr_default_fault:
+      //mrs r0, psp
+      //mrs r1, msp
+      //ldr r2, [r0, 0x18]
+      //ldr r3, [r1, 0x18]
+      //bkpt" :::: "volatile");
+//}
 
 #[allow(non_upper_case_globals)]
 const ISRCount: usize = 16;

@@ -77,6 +77,8 @@ pub mod timers {
   // There are 6 standard 16/32bit timers and 6 "wide" 32/64bit timers
   // TODO
   timer!(TIMER1, Timer1, reg::TIMER_1, sysctl::periph::timer::TIMER_1, false, 37);
+  timer!(TIMER2, Timer2, reg::TIMER_2, sysctl::periph::timer::TIMER_2, false, 39);
+
   timer!(TIMERW0, TimerW0, reg::TIMER_W_0, sysctl::periph::timer::TIMER_W_0, true, 110);
   timer!(TIMERW1, TimerW1, reg::TIMER_W_1, sysctl::periph::timer::TIMER_W_1, true, 112);
 }

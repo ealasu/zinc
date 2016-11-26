@@ -54,7 +54,18 @@ pub mod pins {
   use util::support::get_reg_ref;
 
   // TODO
+  pin!(PIN_A0: PinA0, sysctl::periph::gpio::PORT_A, reg::PORT_A,  0);
+  pin!(PIN_A1: PinA1, sysctl::periph::gpio::PORT_A, reg::PORT_A,  1);
+  pin!(PIN_A2: PinA2, sysctl::periph::gpio::PORT_A, reg::PORT_A,  2);
+  pin!(PIN_A3: PinA3, sysctl::periph::gpio::PORT_A, reg::PORT_A,  3);
+  pin!(PIN_A4: PinA4, sysctl::periph::gpio::PORT_A, reg::PORT_A,  4);
+  pin!(PIN_A5: PinA5, sysctl::periph::gpio::PORT_A, reg::PORT_A,  5);
+  pin!(PIN_A6: PinA6, sysctl::periph::gpio::PORT_A, reg::PORT_A,  6);
+  pin!(PIN_A7: PinA7, sysctl::periph::gpio::PORT_A, reg::PORT_A,  7);
+
   pin!(PIN_B4: PinB4, sysctl::periph::gpio::PORT_B, reg::PORT_B,  4);
+
+  pin!(PIN_B6: PinB6, sysctl::periph::gpio::PORT_B, reg::PORT_B,  6);
 
   pin!(PIN_C0: PinC0, sysctl::periph::gpio::PORT_C, reg::PORT_C,  0);
   pin!(PIN_C1: PinC1, sysctl::periph::gpio::PORT_C, reg::PORT_C,  1);
@@ -145,6 +156,14 @@ pub trait Pin {
       High => true,
     };
     self.regs().data.set_data(self.index(), level);
+  }
+
+  fn set_pull_up(&self, enabled: bool) {
+    self.regs().pur.set_pur(self.index(), enabled);
+  }
+
+  fn set_pull_down(&self, enabled: bool) {
+    self.regs().pdr.set_pdr(self.index(), enabled);
   }
 }
 
