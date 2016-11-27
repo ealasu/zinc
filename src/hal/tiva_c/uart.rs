@@ -88,13 +88,14 @@ impl Uart {
     // compute the baud rate divisor rounded to the nearest
     let brd = ((((sysclk / 16) << 6) + baudrate / 2) / baudrate) as u32;
 
+    // Disable the UART before configuration
+    self.regs.ctl.set_uarten(false);
+
     self.regs.ctl
-      // Disable the UART before configuration
-      .set_uarten(false)
       // Enable TX
       .set_txe(true)
-      // Enable TX
-      .set_rxe(false)
+      // Enable RX
+      .set_rxe(true)
       // Disable High-Speed
       .set_hse(false);
 
@@ -127,6 +128,19 @@ impl Uart {
     // Enable the UART
     self.regs.ctl.set_uarten(true);
   }
+
+  pub fn readc(&self) -> u8 {
+    wait_for!(!self.regs.fr.rxfe());
+    let data = self.regs.data.get();
+    // TODO: check error bits
+    data.data() as u8
+  }
+
+  pub fn read_exact(&self, buf: &mut [u8]) {
+    for b in buf {
+      *b = self.readc();
+    }
+  }
 }
 
 impl CharIO for Uart {
@@ -145,7 +159,11 @@ pub mod reg {
 
   ioregs!(Uart = {
     0x00 => reg32 data {
-      0..11 => data,     //= RX/TX fifo data
+      11 => overrun_error,
+      10 => break_error,
+      9 => parity_error,
+      8 => framing_error,
+      7..0 => data,     //= RX/TX fifo data
     }
     0x18 => reg32 fr {
       0     => ctx:  ro, //= clear-to-send signal is asserted
