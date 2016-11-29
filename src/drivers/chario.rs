@@ -30,13 +30,16 @@ pub trait CharIO {
   /// Outputs a character.
   fn putc(&self, value: char);
 
+  /// Outputs a slice of bytes.
+  fn write(&self, buf: &[u8]) {
+    for b in buf {
+      self.putc(*b as char);
+    }
+  }
+
   /// Outputs a string.
   fn puts(&self, s: &str) {
-    let chars : &[u8] = s.as_ref();
-    for i in 0 .. chars.len() {
-      let c : char = chars[i] as char;
-      self.putc(c);
-    }
+    self.write(s.as_ref());
   }
 
   /// Outputs an integer with given base.

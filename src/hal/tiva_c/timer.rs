@@ -78,6 +78,7 @@ pub mod timers {
   // TODO
   timer!(TIMER1, Timer1, reg::TIMER_1, sysctl::periph::timer::TIMER_1, false, 37);
   timer!(TIMER2, Timer2, reg::TIMER_2, sysctl::periph::timer::TIMER_2, false, 39);
+  timer!(TIMER3, Timer3, reg::TIMER_3, sysctl::periph::timer::TIMER_3, false, 51);
 
   timer!(TIMERW0, TimerW0, reg::TIMER_W_0, sysctl::periph::timer::TIMER_W_0, true, 110);
   timer!(TIMERW1, TimerW1, reg::TIMER_W_1, sysctl::periph::timer::TIMER_W_1, true, 112);
@@ -149,6 +150,10 @@ pub trait TivaTimer {
 
   fn a_enable(&self) {
     self.regs().ctl.set_taen(true);
+  }
+
+  fn set_counter(&self, value: u32) {
+    self.regs().tav.set_v(value);
   }
 }
 
