@@ -73,21 +73,20 @@ pub mod timers {
 
       impl PWMOutput for $type_name {
         fn set_period_us(&mut self, period_us: u32) {
-          // TODO
+          self.a_set_interval(self.us_to_ticks(period_us));
         }
 
         fn get_period_us(&self) -> u32 {
-          // TODO
-          0
+          self.ticks_to_us(self.a_get_interval())
         }
 
         fn set_pulsewidth_us(&mut self, pulsewidth_us: u32) {
-          // TODO
+          let v = self.get_period_us() - pulsewidth_us;
+          self.regs().tamatchr.set_tamr(self.us_to_ticks(v));
         }
 
         fn get_pulsewidth_us(&self) -> u32 {
-          // TODO
-          0
+          self.get_period_us() - self.ticks_to_us(self.regs().tamatchr.tamr())
         }
       }
 
@@ -111,6 +110,16 @@ pub trait TivaTimer {
   fn regs(&self) -> &'static reg::Timer;
   fn wide(&self) -> bool;
   fn irq_num(&self) -> usize;
+
+  fn ticks_to_us(&self, v: u32) -> u32 {
+    // TODO: account for prescaler
+    v / (sysctl::clock::sysclk_get() as u32 / 1000000)
+  }
+
+  fn us_to_ticks(&self, v: u32) -> u32 {
+    // TODO: account for prescaler
+    v * (sysctl::clock::sysclk_get() as u32 / 1000000)
+  }
 
   /// Configure timer registers
   /// TODO(simias): Only Periodic and OneShot modes are implemented so far
@@ -162,6 +171,10 @@ pub trait TivaTimer {
     self.regs().tailr.set_tailr(interval);
   }
 
+  fn a_get_interval(&self) -> u32 {
+    self.regs().tailr.tailr()
+  }
+
   fn a_clear_interrupt(&self) {
     self.regs().icr.set_tatocint(true);
   }
@@ -179,6 +192,21 @@ pub trait TivaTimer {
   }
 
   fn configure_pwm(&self) {
+    self.periph().ensure_enabled();
+
+    // Make sure the timer is disabled before making changes.
+    self.regs().ctl.set_taen(false);
+    self.regs().ctl.set_tben(false);
+
+    self.regs().cfg.set_cfg(reg::Timer_cfg_cfg::HalfWidth);
+    self.regs().mr[0].set_ams(true);
+    self.regs().mr[0].set_cmr(false);
+    self.regs().mr[0].set_mr(reg::Timer_mr_mr::Periodic);
+
+  }
+
+  fn enable_pwm(&self) {
+    self.a_enable();
   }
 }
 
@@ -264,6 +292,9 @@ pub mod reg {
     0x28 => reg32 tailr {
       0..31 => tailr,      //= Timer A interval load
     }
+    0x30 => reg32 tamatchr {
+      0..31 => tamr, //= Timer A match register
+    }
     0x38 => reg32 apr {
       0..15 => psr,        //= Timer A prescale value
                            //= Only 8bit for 16/32bit timers
@@ -282,8 +313,8 @@ pub mod reg {
 
   pub const TIMER_W_0: *const Timer = 0x40036000 as *const Timer;
   pub const TIMER_W_1: *const Timer = 0x40037000 as *const Timer;
-  pub const TIMER_W_2: *const Timer = 0x4003C000 as *const Timer;
-  pub const TIMER_W_3: *const Timer = 0x4003D000 as *const Timer;
-  pub const TIMER_W_4: *const Timer = 0x4003E000 as *const Timer;
-  pub const TIMER_W_5: *const Timer = 0x4003F000 as *const Timer;
+  pub const TIMER_W_2: *const Timer = 0x4004C000 as *const Timer;
+  pub const TIMER_W_3: *const Timer = 0x4004D000 as *const Timer;
+  pub const TIMER_W_4: *const Timer = 0x4004E000 as *const Timer;
+  pub const TIMER_W_5: *const Timer = 0x4004F000 as *const Timer;
 }

@@ -42,20 +42,19 @@ pub mod pwms {
 
       impl PWMOutput for $type_name {
         fn set_period_us(&mut self, period_us: u32) {
-          self.set_period((self.clock() / 1000000 * period_us) as u16);
+          self.set_period(self.us_to_ticks(period_us) as u16);
         }
 
         fn get_period_us(&self) -> u32 {
-          self.period() as u32 / (self.clock() / 1000000)
+          self.ticks_to_us(self.period() as u32)
         }
 
         fn set_pulsewidth_us(&mut self, pulsewidth_us: u32) {
-          // TODO
+          self.set_pulse_width(self.us_to_ticks(pulsewidth_us) as u16);
         }
 
         fn get_pulsewidth_us(&self) -> u32 {
-          // TODO
-          0
+          self.ticks_to_us(self.pulse_width() as u32)
         }
       }
 
@@ -80,6 +79,15 @@ pub trait PwmGen {
   fn pin(&self) -> Self::Pin;
   fn pin_function(&self) -> u8;
   fn chan(&self) -> usize;
+
+  fn ticks_to_us(&self, v: u32) -> u32 {
+    v / (self.clock() / 1000000)
+  }
+
+  fn us_to_ticks(&self, v: u32) -> u32 {
+    v * (self.clock() / 1000000)
+  }
+
 
   fn index(&self) -> usize {
     self.chan() % 2
