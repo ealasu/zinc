@@ -46,6 +46,7 @@ pub mod timers {
   use super::*;
   use util::support::get_reg_ref;
   use hal::tiva_c::sysctl;
+  use hal::pwm::PWMOutput;
 
   macro_rules! timer {
     ($name:ident, $type_name:ident, $regs:expr, $periph:expr, $wide:expr, $irq_num:expr) => {
@@ -70,6 +71,26 @@ pub mod timers {
         }
       }
 
+      impl PWMOutput for $type_name {
+        fn set_period_us(&mut self, period_us: u32) {
+          // TODO
+        }
+
+        fn get_period_us(&self) -> u32 {
+          // TODO
+          0
+        }
+
+        fn set_pulsewidth_us(&mut self, pulsewidth_us: u32) {
+          // TODO
+        }
+
+        fn get_pulsewidth_us(&self) -> u32 {
+          // TODO
+          0
+        }
+      }
+
       pub const $name: $type_name = $type_name;
     }
   }
@@ -82,6 +103,7 @@ pub mod timers {
 
   timer!(TIMERW0, TimerW0, reg::TIMER_W_0, sysctl::periph::timer::TIMER_W_0, true, 110);
   timer!(TIMERW1, TimerW1, reg::TIMER_W_1, sysctl::periph::timer::TIMER_W_1, true, 112);
+  timer!(TIMERW2, TimerW2, reg::TIMER_W_2, sysctl::periph::timer::TIMER_W_2, true, 114);
 }
 
 pub trait TivaTimer {
@@ -155,6 +177,9 @@ pub trait TivaTimer {
   fn set_counter(&self, value: u32) {
     self.regs().tav.set_v(value);
   }
+
+  fn configure_pwm(&self) {
+  }
 }
 
 impl<T: TivaTimer> timer::Timer for T {
@@ -166,6 +191,7 @@ impl<T: TivaTimer> timer::Timer for T {
     !self.regs().tav.v()
   }
 }
+
 
 pub mod reg {
   //! Timer registers definition

@@ -4,10 +4,11 @@ use hal::tiva_c::sysctl;
 use hal::tiva_c::pin::Pin;
 
 pub mod pwms {
+  use super::*;
   use util::support::get_reg_ref;
   use hal::tiva_c::sysctl;
   use hal::tiva_c::pin::pins::*;
-  use super::*;
+  use hal::pwm::PWMOutput;
 
   macro_rules! pwm {
     ($name:ident : $type_name:ident,
@@ -37,6 +38,25 @@ pub mod pwms {
 
         fn pin(&self) -> Self::Pin { $pin }
         fn pin_function(&self) -> u8 { $pin_fn }
+      }
+
+      impl PWMOutput for $type_name {
+        fn set_period_us(&mut self, period_us: u32) {
+          self.set_period((self.clock() / 1000000 * period_us) as u16);
+        }
+
+        fn get_period_us(&self) -> u32 {
+          self.period() as u32 / (self.clock() / 1000000)
+        }
+
+        fn set_pulsewidth_us(&mut self, pulsewidth_us: u32) {
+          // TODO
+        }
+
+        fn get_pulsewidth_us(&self) -> u32 {
+          // TODO
+          0
+        }
       }
 
       pub const $name: $type_name = $type_name;
@@ -106,6 +126,7 @@ pub trait PwmGen {
     self.regs().ctl.set_enable(true);
   }
 }
+
 
 pub mod reg {
   use volatile_cell::VolatileCell;
