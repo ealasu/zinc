@@ -69,8 +69,14 @@ pub mod pins {
   pin!(PIN_A6: PinA6, sysctl::periph::gpio::PORT_A, reg::PORT_A,  6, 16);
   pin!(PIN_A7: PinA7, sysctl::periph::gpio::PORT_A, reg::PORT_A,  7, 16);
 
+  pin!(PIN_B0: PinB0, sysctl::periph::gpio::PORT_B, reg::PORT_B,  0, 17);
+  pin!(PIN_B1: PinB1, sysctl::periph::gpio::PORT_B, reg::PORT_B,  1, 17);
+  pin!(PIN_B2: PinB2, sysctl::periph::gpio::PORT_B, reg::PORT_B,  2, 17);
+  pin!(PIN_B3: PinB3, sysctl::periph::gpio::PORT_B, reg::PORT_B,  3, 17);
   pin!(PIN_B4: PinB4, sysctl::periph::gpio::PORT_B, reg::PORT_B,  4, 17);
+  pin!(PIN_B5: PinB5, sysctl::periph::gpio::PORT_B, reg::PORT_B,  5, 17);
   pin!(PIN_B6: PinB6, sysctl::periph::gpio::PORT_B, reg::PORT_B,  6, 17);
+  pin!(PIN_B7: PinB7, sysctl::periph::gpio::PORT_B, reg::PORT_B,  7, 17);
 
   pin!(PIN_C0: PinC0, sysctl::periph::gpio::PORT_C, reg::PORT_C,  0, 18);
   pin!(PIN_C1: PinC1, sysctl::periph::gpio::PORT_C, reg::PORT_C,  1, 18);
